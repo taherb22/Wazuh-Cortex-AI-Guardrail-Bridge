@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------
+  # 1. Elasticsearch (Database required by Cortex)
+  # -------------------------------------------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    container_name: elasticsearch
+    environment:
+      - http.host=0.0.0.0
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - sec_net
+
+  # -------------------------------------------------------
+  # 2. Cortex (The Analysis Engine)
+  # -------------------------------------------------------
+  cortex:
+    image: thehiveproject/cortex:3.1.7-1
+    container_name: cortex
+    depends_on:
+      - elasticsearch
+    ports:
+      - "9001:9001"  # <--- This is the website port
+    environment:
+      - job_directory=/tmp/cortex-jobs
+    # Cortex needs to know where ES is. 
+    # By default it looks for 'elasticsearch:9200', which matches our service name.
+    networks:
+      - sec_net
+
+  # -------------------------------------------------------
+  # 3. The Connector (Wazuh Bridge)
+  # -------------------------------------------------------
+  connector:
+    build: .
+    container_name: wazuh_connector
+    command: python main.py
+    ports:
+      - "6000:6000"
+    env_file:
+      - .env
+    depends_on:
+      - guardrail
+      - cortex
+    networks:
+      - sec_net
+
+  # -------------------------------------------------------
+  # 4. The Guardrail (Mock AI)
+  # -------------------------------------------------------
+  guardrail:
+    build: .
+    container_name: mock_guardrail
+    command: python mock_guardrail.py
+    expose:
+      - "8080"
+    networks:
+      - sec_net
+
+networks:
+  sec_net:
+    driver: bridge
