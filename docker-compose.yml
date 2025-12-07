@@ -15,23 +15,25 @@ services:
       - "9200:9200"
     networks:
       - sec_net
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
 
   # -------------------------------------------------------
-  # 2. Cortex (The Analysis Engine)
+  # 2. Cortex (The Analysis Engine) - Latest with Neurons
   # -------------------------------------------------------
   cortex:
-    image: thehiveproject/cortex:3.1.7-1
+    image: thehiveproject/cortex:latest
     container_name: cortex
     depends_on:
       - elasticsearch
     ports:
-      - "9001:9001"  # <--- This is the website port
+      - "9001:9001"
     environment:
       - job_directory=/tmp/cortex-jobs
-    # Cortex needs to know where ES is. 
-    # By default it looks for 'elasticsearch:9200', which matches our service name.
     networks:
       - sec_net
+    volumes:
+      - cortex-jobs:/tmp/cortex-jobs
 
   # -------------------------------------------------------
   # 3. The Connector (Wazuh Bridge)
@@ -65,3 +67,7 @@ services:
 networks:
   sec_net:
     driver: bridge
+
+volumes:
+  es-data:
+  cortex-jobs:
